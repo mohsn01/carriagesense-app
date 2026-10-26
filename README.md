@@ -22,10 +22,26 @@ npm run dev
 ```
 
 On a laptop the app appears in a device frame with a **Phone / Tablet** switch.
-Press **Demo** in the header to play a whole journey (home in Fangcun → Canton
-Tower) with a simulated GPS. No travelling needed.
+Press **Demo** in the header to try a whole journey (home near Tiyu Xilu → Baiyun
+Airport) with a simulated GPS. No travelling needed. The demo never starts a trip by itself:
+it waits, with time paused, until you decide.
+
+## Deciding whether to go
+
+Before you scan in at a gate you can check whether the trip is worth it:
+
+- **Should you go?** shows how crowded the station should be when you arrive and how crowded your train
+  should be, with a reminder that once you tap in it is hard to turn back. If it will be busy, the main button
+  turns into a red **Go anyway**, and the app suggests leaving later.
+- **Other ways to get there** compares the metro with a taxi / ride-hail, bus, bike and walking (time, arrival,
+  approximate price, traffic). These are **estimates from distance and time of day** with no live bus or traffic
+  data, and taxi prices are approximate.
 
 ## Presenting the demo
+
+- **Time of day (demo only):** while the demo is waiting for your decision, chips let you jump between
+  *Morning rush, Lunch, Before the rush, Evening rush* and *Late* to show how the same trip changes. Time stays
+  paused until you press **Start trip**, then it runs at 14x.
 
 - **Leave time:** on Plan, pick *Leave now*, 5, 10, 15, 20 or 30 minutes, or type any number of
   minutes. The next train at your station, the arrival time and the crowding are all calculated for that

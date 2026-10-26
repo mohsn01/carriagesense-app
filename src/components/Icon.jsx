@@ -142,6 +142,27 @@ const ICONS = {
     </>
   ),
   navigation: <path d="M12 3l7 17-7-4-7 4z" />,
+  car: (
+    <>
+      <path d="M4.5 16.5v-5l2-5h11l2 5v5z" />
+      <path d="M4.5 11.5h15M7 16.5v2.5M17 16.5v2.5" />
+      <path d="M8 14h.01M16 14h.01" strokeWidth="2.4" />
+    </>
+  ),
+  bus: (
+    <>
+      <rect x="4" y="3.5" width="16" height="14" rx="3" />
+      <path d="M4 11h16M7.5 20.5v-3M16.5 20.5v-3" />
+      <path d="M8 14.3h.01M16 14.3h.01" strokeWidth="2.4" />
+    </>
+  ),
+  bike: (
+    <>
+      <circle cx="6" cy="16" r="3.5" />
+      <circle cx="18" cy="16" r="3.5" />
+      <path d="M6 16l4-7h5l3 7M10 9l3 7M9 6h3" />
+    </>
+  ),
   x: <path d="M6 6l12 12M18 6L6 18" />,
   history: (
     <>

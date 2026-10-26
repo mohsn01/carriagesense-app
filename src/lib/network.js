@@ -13,10 +13,13 @@ const MIN = 60000;
 // Graph
 // ---------------------------------------------------------------------------
 
-// Minutes between two adjacent stations: dwell + distance at ~33 km/h.
+// Minutes between two adjacent stations: dwell + running time. Over short city
+// gaps a train averages about 33 km/h; over long gaps (the airport branch) it
+// reaches much higher speeds, so average speed grows with the gap, capped at 80 km/h.
 function edgeMinutes(aId, bId) {
-  const d = haversine(STATIONS[aId], STATIONS[bId]);
-  return Math.max(1.4, 0.4 + (d * 1.15) / 550);
+  const km = haversine(STATIONS[aId], STATIONS[bId]) / 1000;
+  const kmh = Math.min(80, 25 + 8 * km);
+  return Math.max(1.4, 0.5 + ((km * 1.15) / kmh) * 60);
 }
 
 // offsets[serviceId][i] = minutes from the first station of the service to station i

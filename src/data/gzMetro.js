@@ -74,8 +74,8 @@ baiyundadaobei|Baiyun Dadao North|白云大道北|23.2085|113.2870
 longgui|Longgui|龙归|23.2480|113.2650
 renhe|Renhe|人和|23.2850|113.2780
 gaozeng|Gaozeng|高增|23.3250|113.2920
-airportsouth|Airport South (T1)|机场南(1号航站楼)|23.3770|113.2970
-airportnorth|Airport North (T2)|机场北(2号航站楼)|23.3980|113.3010
+airportsouth|Airport South (T1)|机场南(1号航站楼)|23.3920|113.2995
+airportnorth|Airport North (T2)|机场北(2号航站楼)|23.4050|113.3030
 
 jiaokou|Jiaokou|滘口|23.1020|113.2280
 tanwei|Tanwei|坦尾|23.1090|113.2350
@@ -280,7 +280,7 @@ export const SERVICE_BY_ID = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
 // Well-known places so the planner works offline. Coordinates are approximate.
 export const LANDMARKS = [
   { id: 'lm-cantontower', name: { en: 'Canton Tower', zh: '广州塔' }, lat: 23.1065, lng: 113.3245 },
-  { id: 'lm-airport', name: { en: 'Baiyun Airport T1', zh: '白云机场T1' }, lat: 23.3920, lng: 113.2990 },
+  { id: 'lm-airport', name: { en: 'Baiyun Airport T1', zh: '白云机场T1' }, lat: 23.3925, lng: 113.2990 },
   { id: 'lm-gznan', name: { en: 'Guangzhou South Station', zh: '广州南站' }, lat: 22.9895, lng: 113.2695 },
   { id: 'lm-beijinglu', name: { en: 'Beijing Road Pedestrian Street', zh: '北京路步行街' }, lat: 23.1255, lng: 113.2715 },
   { id: 'lm-chenjiaci', name: { en: 'Chen Clan Academy', zh: '陈氏书院' }, lat: 23.1262, lng: 113.2470 },

@@ -2121,3 +2121,167 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Go / don't go decision, other ways to travel, demo banner */
+.decision {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  background: var(--clear-soft);
+}
+.decision.busy {
+  background: var(--moderate-soft);
+}
+.decision.packed {
+  background: var(--crowded-soft);
+}
+.decision-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--clear-ink);
+}
+.decision.busy .decision-head {
+  color: var(--moderate-ink);
+}
+.decision.packed .decision-head {
+  color: var(--crowded-ink);
+}
+.decision-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.decision-rows li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.decision-note {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.decision-note svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.btn-primary.warn {
+  background: var(--crowded);
+  color: #fff;
+  box-shadow: 0 14px 26px -14px var(--crowded);
+}
+.alts-lead {
+  margin-bottom: 0.7rem;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+.alts-lead.warn {
+  color: var(--crowded-ink);
+  font-weight: 700;
+}
+.alt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.alt-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border: 1.5px solid var(--line);
+  border-radius: 1rem;
+}
+.alt-row.current {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+.alt-icon {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 0.8rem;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.alt-row.current .alt-icon {
+  background: var(--surface);
+  color: var(--teal-ink);
+}
+.alt-main {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  line-height: 1.3;
+}
+.alt-main strong {
+  font-size: 0.92rem;
+}
+.alt-side {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+}
+.alt-side b {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.alt-side small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.demo-banner {
+  border-style: dashed;
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+.demo-banner-head {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-bottom: 0.7rem;
+}
+.demo-banner-head > div {
+  display: grid;
+  gap: 0.15rem;
+  line-height: 1.3;
+}
+.demo-banner-head svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--teal-ink);
+}
+.demo-banner .chips-scroll {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  margin: 0 -1rem;
+  padding: 0 1rem 0.2rem;
+  scrollbar-width: none;
+}
+.demo-banner .chips-scroll::-webkit-scrollbar {
+  display: none;
+}

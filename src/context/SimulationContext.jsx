@@ -17,9 +17,10 @@ const FIX_MAX_AGE_MS = 30000;
 const FIX_MAX_ACCURACY_M = 150;
 const DEMO_SPEED = 14; // demo clock runs 14x so a whole trip fits in about two minutes
 
-// Demo scenario: someone at home in Fangcun heading for Canton Tower at 08:20.
-const DEMO_FROM = { id: 'demo-home', kind: 'demo', name: { en: 'Home (demo)', zh: '家（演示）' }, lat: 23.099, lng: 113.25 };
-const DEMO_TO = { ...LANDMARKS.find((l) => l.id === 'lm-cantontower'), kind: 'landmark' };
+// Demo scenario (the CarriageSense story): Naomi lives a few minutes' walk from Tiyu Xilu,
+// where Line 1 meets Line 3, and commutes to Baiyun Airport on a weekday morning at 08:20.
+const DEMO_FROM = { id: 'demo-home', kind: 'demo', name: { en: 'Home (Tianhe)', zh: '家（天河）' }, lat: 23.1318, lng: 113.3176 };
+const DEMO_TO = { ...LANDMARKS.find((l) => l.id === 'lm-airport'), kind: 'landmark' };
 
 // Where the passenger is according to the timetable, for when GPS is missing
 // (underground) and for the demo.
@@ -100,11 +101,13 @@ export function SimulationProvider({ children }) {
   useEffect(() => startCrowdFeed(() => setCrowdVersion((v) => v + 1)), []);
 
   // ---- clock (virtual while the demo runs) --------------------------------
-  const demoClock = useRef(null); // { baseMs, realStart }
+  const demoClock = useRef(null); // { baseMs, realStart, paused }
   const skew = useRef(0); // demo controls jump the clock forward by moving this
   const clock = useCallback(() => {
     const d = demoClock.current;
-    return (d ? d.baseMs + (Date.now() - d.realStart) * DEMO_SPEED : Date.now()) + skew.current;
+    // While the passenger is still deciding, demo time stands still.
+    const base = d ? (d.paused ? d.baseMs : d.baseMs + (Date.now() - d.realStart) * DEMO_SPEED) : Date.now();
+    return base + skew.current;
   }, []);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -230,8 +233,14 @@ export function SimulationProvider({ children }) {
 
   function startTrip() {
     if (!route || route.sameStation || !selected) return;
-    const sched = buildSchedule(route, now + selected.offset * MIN, route.board.walkMin);
-    setTrip({ route, sched, startedAt: now, notBefore: 0 });
+    const startMs = now + selected.offset * MIN;
+    const sched = buildSchedule(route, startMs, route.board.walkMin);
+    // The demo clock starts running only now, from the moment the passenger leaves.
+    if (demo && demoClock.current?.paused) {
+      demoClock.current = { baseMs: startMs, realStart: Date.now(), paused: false };
+      setNow(startMs);
+    }
+    setTrip({ route, sched, startedAt: startMs, notBefore: 0 });
     setScreen('trip');
     if (!demo && fromPlace?.kind === 'gps') geo.start();
   }
@@ -239,8 +248,9 @@ export function SimulationProvider({ children }) {
   function endTrip() {
     skew.current = 0;
     setTrip(null);
-    if (demo) stopDemo();
-    setScreen('plan');
+    // In the demo, ending the trip resets the scenario so it can be played again.
+    if (demo) startDemo();
+    else setScreen('plan');
   }
 
   // ---- places -------------------------------------------------------------
@@ -271,10 +281,8 @@ export function SimulationProvider({ children }) {
   }
 
   // ---- demo ---------------------------------------------------------------
-  const demoTimer = useRef(null);
   const demoBase = useRef(0);
   function startDemo() {
-    clearTimeout(demoTimer.current);
     // The demo plays a weekday 08:20 (morning rush), using the most recent weekday if today is a weekend.
     const base = new Date();
     while (base.getDay() === 0 || base.getDay() === 6) base.setDate(base.getDate() - 1);
@@ -283,7 +291,8 @@ export function SimulationProvider({ children }) {
     clearStationReadings();
     setCrowdVersion((v) => v + 1);
     demoBase.current = base.getTime();
-    demoClock.current = { baseMs: base.getTime(), realStart: Date.now() };
+    // Time is paused: the demo waits for the passenger to decide, it never starts a trip itself.
+    demoClock.current = { baseMs: base.getTime(), realStart: Date.now(), paused: true };
     setNow(base.getTime());
     setDemo(true);
     setTrip(null);
@@ -293,8 +302,18 @@ export function SimulationProvider({ children }) {
     setScreen('plan');
   }
 
+  // Change the demo's time of day (only while it is waiting for a decision).
+  function setDemoTime(hour, minute) {
+    if (!demoClock.current?.paused) return;
+    const d = new Date(demoBase.current);
+    d.setHours(hour, minute, 0, 0);
+    demoClock.current = { ...demoClock.current, baseMs: d.getTime() };
+    clearStationReadings();
+    setCrowdVersion((v) => v + 1);
+    setNow(clock());
+  }
+
   function stopDemo() {
-    clearTimeout(demoTimer.current);
     demoClock.current = null;
     skew.current = 0;
     clearStationReadings();
@@ -303,20 +322,6 @@ export function SimulationProvider({ children }) {
     setDemo(false);
     setTrip(null);
   }
-
-  // The demo hands over to the live tracker a few seconds after the plan appears.
-  useEffect(() => {
-    if (!demo || trip || !route || route.sameStation || screen !== 'plan') return undefined;
-    demoTimer.current = setTimeout(() => {
-      // Restart the virtual clock where the plan was made, so the trip matches the plan on screen.
-      const t0 = demoBase.current;
-      demoClock.current = { baseMs: t0, realStart: Date.now() };
-      setNow(t0);
-      setTrip({ route, sched: buildSchedule(route, t0, route.board.walkMin), startedAt: t0, notBefore: 0 });
-      setScreen('trip');
-    }, 4500);
-    return () => clearTimeout(demoTimer.current);
-  }, [demo, trip, route, screen, clock]);
 
   // ---- demo controls and station readings ----------------------------------
   // Jump the clock so the trip reaches `targetMs` (used by the presenter buttons).
@@ -345,6 +350,12 @@ export function SimulationProvider({ children }) {
     });
   }
 
+  // A link ending in ?demo=1 (for example from a QR code) opens the app straight into the demo.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') startDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const value = {
     screen,
     setScreen,
@@ -365,6 +376,7 @@ export function SimulationProvider({ children }) {
     setLeaveOffset,
     crowdVersion,
     skipTo,
+    setDemoTime,
     setCrowdReading,
     waitForNextTrain,
     fromPoint,

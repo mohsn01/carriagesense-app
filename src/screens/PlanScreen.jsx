@@ -6,7 +6,7 @@ import { fmtClock, fmtDistance, isNextDay } from '../lib/geo';
 import { nearestStations } from '../lib/network';
 import { placeName } from '../lib/places';
 import { buildSteps } from '../lib/steps';
-import { trainCrowd } from '../lib/crowd';
+import { trainCrowd, stationCrowd } from '../lib/crowd';
 import Icon from '../components/Icon';
 import LineBadge from '../components/LineBadge';
 import StepList from '../components/StepList';
@@ -16,6 +16,9 @@ import RushCard from '../components/RushCard';
 import TrainsCard from '../components/TrainsCard';
 import LeavePicker from '../components/LeavePicker';
 import CrowdSimulator from '../components/CrowdSimulator';
+import GoDecision from '../components/GoDecision';
+import AlternativesCard from '../components/AlternativesCard';
+import DemoBanner from '../components/DemoBanner';
 
 const MIN = 60000;
 
@@ -61,6 +64,7 @@ export default function PlanScreen() {
   const {
     now,
     demo,
+    trip,
     fromPlace,
     toPlace,
     setPicker,
@@ -114,9 +118,15 @@ export default function PlanScreen() {
     return trainCrowd(w.serviceId, w.at, w.dir, w.endMs);
   };
 
+  // Each option is judged by the worse of the station (when you arrive) and the train.
   const scored = options.map((o) => {
     const crowd = firstTrainCrowd(o.sched);
-    return { ...o, crowd, score: (o.sched.endMs - now) / MIN + CROWD_PENALTY[crowd.level] };
+    const station = stationCrowd(
+      route.legs[0].stations[0],
+      now + o.offset * MIN + route.board.walkMin * MIN
+    );
+    const worstC = CROWD_RANK[station.level] > CROWD_RANK[crowd.level] ? station : crowd;
+    return { ...o, crowd, worstC, score: (o.sched.endMs - now) / MIN + CROWD_PENALTY[worstC.level] };
   });
   const best = scored.reduce((b, o) => (o.score < b.score - 0.01 ? o : b), scored[0]);
   const current = scored.find((o) => o.offset === leaveOffset);
@@ -124,18 +134,25 @@ export default function PlanScreen() {
   // What the plan recommends, given how busy each option's train should be.
   let advice = null;
   if (current && best) {
-    if (best.offset !== current.offset && CROWD_RANK[best.crowd.level] < CROWD_RANK[current.crowd.level]) {
+    if (best.offset !== current.offset && CROWD_RANK[best.worstC.level] < CROWD_RANK[current.worstC.level]) {
       advice = {
         kind: 'switch',
         offset: best.offset,
         later: Math.round((best.sched.endMs - current.sched.endMs) / MIN),
       };
-    } else if (CROWD_RANK[current.crowd.level] >= 2) {
+    } else if (CROWD_RANK[current.worstC.level] >= 2) {
       advice = { kind: 'busyAll' };
     } else {
       advice = { kind: 'good' };
     }
   }
+
+  // Decision support: how busy is the station when you get there, and the train you would take.
+  const boardId = route?.legs?.[0]?.stations?.[0];
+  const reachMs = leaveMs + (route?.board?.walkMin || 0) * MIN;
+  const stationNow = route && !route.sameStation && boardId ? stationCrowd(boardId, reachMs) : null;
+  const tooBusy =
+    !!(stationNow && current) && Math.max(CROWD_RANK[stationNow.level], CROWD_RANK[current.crowd.level]) >= 2;
 
   return (
     <div className="page page-grid">
@@ -143,6 +160,8 @@ export default function PlanScreen() {
         <h1>{t('planTitle')}</h1>
         <p className="muted">{t('planSub')}</p>
       </header>
+
+      {demo && !trip && <DemoBanner />}
 
       <section className="card route-card">
         <div className="places">
@@ -225,6 +244,21 @@ export default function PlanScreen() {
         </section>
       )}
 
+      {stationNow && current && (
+        <section className="card">
+          <h2 className="card-title">{t('decisionTitle')}</h2>
+          <GoDecision
+            station={route.board.station.name[lang]}
+            reachMs={reachMs}
+            stationCrowd={stationNow}
+            trainMs={selected.sched.boardMs}
+            trainCrowd={current.crowd}
+            switchTo={advice?.kind === 'switch' ? advice.offset : null}
+            onSwitch={() => setLeaveOffset(advice.offset)}
+          />
+        </section>
+      )}
+
       {scored.length > 0 && (
         <section className="card span-all-sm">
           <div className="card-head">
@@ -242,12 +276,12 @@ export default function PlanScreen() {
                   {advice.kind === 'switch'
                     ? t(advice.offset === 0 ? 'recSwitchNow' : 'recSwitch', {
                         n: advice.offset,
-                        level: t(`crowd_${best.crowd.level}`),
-                        was: t(`crowd_${current.crowd.level}`),
+                        level: t(`crowd_${best.worstC.level}`),
+                        was: t(`crowd_${current.worstC.level}`),
                         d: Math.max(0, advice.later),
                       })
                     : advice.kind === 'good'
-                      ? t('recGood', { level: t(`crowd_${current.crowd.level}`) })
+                      ? t('recGood', { level: t(`crowd_${current.worstC.level}`) })
                       : t('recBusyAll')}
                 </strong>
                 {advice.kind === 'switch' && (
@@ -277,8 +311,10 @@ export default function PlanScreen() {
                   <span className="opt-top">
                     <strong>{o.offset === 0 ? t('leaveNow') : t('leaveIn', { n: o.offset })}</strong>
                     <small>{fmtClock(optLeave)}</small>
-                    {o.offset === best.offset && scored.length > 1 && <span className="tag tag-teal">{t('tagRecommended')}</span>}
-                    <CrowdPill crowd={o.crowd} showPct={false} />
+                    {o.offset === best.offset && scored.length > 1 && CROWD_RANK[o.worstC.level] < 2 && (
+                      <span className="tag tag-teal">{t('tagRecommended')}</span>
+                    )}
+                    <CrowdPill crowd={o.worstC} showPct={false} />
                   </span>
                   <span className="opt-line">
                     <Icon name="train" size={15} />
@@ -319,6 +355,20 @@ export default function PlanScreen() {
             </div>
           </div>
           <TrainsCard route={route} now={now} leaveMs={leaveMs} />
+        </section>
+      )}
+
+      {route && !route.sameStation && selected && current && (
+        <section className="card">
+          <div className="card-head">
+            <h2 className="card-title">{t('altTitle')}</h2>
+          </div>
+          <AlternativesCard
+            from={route.from}
+            to={route.to}
+            leaveMs={leaveMs}
+            metro={{ minutes: selected.sched.totalMin, arriveMs: selected.sched.endMs, crowd: current.crowd }}
+          />
         </section>
       )}
 
@@ -377,9 +427,9 @@ export default function PlanScreen() {
 
       {route && !route.sameStation && (
         <div className="cta-bar span-all">
-          <button className="btn-primary" onClick={startTrip}>
-            <Icon name="navigation" size={20} strokeWidth={2.2} />
-            {t('startTrip')}
+          <button className={`btn-primary ${tooBusy ? 'warn' : ''}`} onClick={startTrip}>
+            <Icon name={tooBusy ? 'alert' : 'navigation'} size={20} strokeWidth={2.2} />
+            {tooBusy ? t('goAnyway') : t('startTrip')}
           </button>
         </div>
       )}
